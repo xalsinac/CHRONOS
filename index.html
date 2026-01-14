@@ -5,9 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CHRONOS - Mapa de Intervenciones</title>
-    <!-- Tailwind CDN: Usado para prototipado rápido y compatibilidad con el entorno de ejecución -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -17,6 +16,7 @@
             margin: 0;
             padding: 0;
             background-color: #020617;
+            color: #f8fafc;
         }
         #root {
             height: 100vh;
@@ -24,23 +24,18 @@
         }
         .leaflet-container { 
             background: #020617 !important; 
-            height: 100%;
-            width: 100%;
         }
-        /* Correcciones para popups de Leaflet en modo oscuro */
         .custom-popup .leaflet-popup-content-wrapper {
-            background: #0f172a;
-            color: #f1f5f9;
+            background: #0f172a !important;
+            color: #f1f5f9 !important;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 4px;
         }
-        .custom-popup .leaflet-popup-tip { background: #0f172a; }
+        .custom-popup .leaflet-popup-tip { background: #0f172a !important; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Estilo para el badge de conteo en el mapa */
         .marker-count-badge {
             background: #ffffff;
             color: #000000;
@@ -70,16 +65,18 @@
 <script type="importmap">
 {
   "imports": {
-    "react-leaflet": "https://esm.sh/react-leaflet@^5.0.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "react/": "https://esm.sh/react@^19.2.3/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-leaflet": "https://esm.sh/react-leaflet@^5.0.0",
     "leaflet": "https://esm.sh/leaflet@^1.9.4"
   }
 }
 </script>
 </head>
-<body class="bg-slate-950 text-slate-100 overflow-hidden h-screen w-screen">
+<body class="bg-slate-950 overflow-hidden h-screen w-screen">
     <div id="root"></div>
+    <!-- Importamos el entry point de la aplicación -->
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
