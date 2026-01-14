@@ -4,25 +4,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Historia de Intervenciones - Mapa Interactivo</title>
+    <title>CHRONOS - Mapa de Intervenciones</title>
+    <!-- Tailwind CDN: Usado para prototipado rápido y compatibilidad con el entorno de ejecución -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .leaflet-container { background: #0f172a !important; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0;
+            padding: 0;
+            background-color: #020617;
+        }
+        #root {
+            height: 100vh;
+            width: 100vw;
+        }
+        .leaflet-container { 
+            background: #020617 !important; 
+            height: 100%;
+            width: 100%;
+        }
+        /* Correcciones para popups de Leaflet en modo oscuro */
         .custom-popup .leaflet-popup-content-wrapper {
-            background: #1e293b;
+            background: #0f172a;
             color: #f1f5f9;
             border-radius: 12px;
-            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 4px;
         }
-        .custom-popup .leaflet-popup-tip { background: #1e293b; }
-        /* Hide scrollbar but keep functionality */
+        .custom-popup .leaflet-popup-tip { background: #0f172a; }
+        
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Estilo para el badge de conteo en el mapa */
+        .marker-count-badge {
+            background: #ffffff;
+            color: #000000;
+            font-weight: 900;
+            font-size: 10px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+            border: 2px solid #dc2626;
+            z-index: 1000;
+        }
+        @media (min-width: 768px) {
+            .marker-count-badge {
+                width: 22px;
+                height: 22px;
+                font-size: 11px;
+            }
+        }
     </style>
 <script type="importmap">
 {
