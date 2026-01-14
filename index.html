@@ -3,28 +3,40 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CHRONOS - Mapa de Intervenciones</title>
+    
+    <!-- PWA & Mobile Optimization -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CHRONOS">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             background-color: #020617;
             color: #f8fafc;
+            overscroll-behavior: none;
         }
-        #root {
-            height: 100vh;
-            width: 100vw;
-        }
-        .leaflet-container { 
-            background: #020617 !important; 
-        }
+        #root { height: 100vh; width: 100vw; }
+        .leaflet-container { background: #020617 !important; height: 100%; width: 100%; }
+        
+        /* Custom UI Styles */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
         .custom-popup .leaflet-popup-content-wrapper {
             background: #0f172a !important;
             color: #f1f5f9 !important;
@@ -32,9 +44,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .custom-popup .leaflet-popup-tip { background: #0f172a !important; }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         .marker-count-badge {
             background: #ffffff;
@@ -52,31 +61,242 @@
             pointer-events: none;
             box-shadow: 0 2px 8px rgba(0,0,0,0.6);
             border: 2px solid #dc2626;
-            z-index: 1000;
         }
+
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px; width: 20px;
+            border-radius: 50%; background: #dc2626;
+            cursor: pointer; border: 3px solid #1e293b;
+            margin-top: -8px;
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            background: #1e293b; border-radius: 2px;
+        }
+
         @media (min-width: 768px) {
-            .marker-count-badge {
-                width: 22px;
-                height: 22px;
-                font-size: 11px;
-            }
+            .marker-count-badge { width: 22px; height: 22px; font-size: 11px; }
+            input[type=range]::-webkit-slider-thumb { height: 32px; width: 32px; margin-top: -14px; }
+            input[type=range]::-webkit-slider-runnable-track { height: 6px; }
         }
+
+        /* Animations */
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slideUp { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react-leaflet": "https://esm.sh/react-leaflet@^5.0.0",
-    "leaflet": "https://esm.sh/leaflet@^1.9.4"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "leaflet": "https://esm.sh/leaflet@^1.9.4",
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>
 </head>
-<body class="bg-slate-950 overflow-hidden h-screen w-screen">
+<body>
     <div id="root"></div>
-    <!-- Importamos el entry point de la aplicación -->
-    <script type="module" src="/index.tsx"></script>
+
+    <script type="text/babel" data-presets="react,typescript">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- DATA ---
+        const interventions = [
+          { id: "gt-1954", country: "Guatemala", years: [1954, 1960, 1966, 1982], type: 'operation', description: "Operación PBSUCCESS y contrainsurgencia.", expandedDescription: "Derrocamiento de Árbenz seguido de décadas de apoyo a dictaduras militares y genocidio indígena.", coordinates: [15.78, -90.23] },
+          { id: "br-1964", country: "Brasil", years: [1964], type: 'coup', description: "Operación Brother Sam.", expandedDescription: "Apoyo naval y diplomático al golpe militar que instauró una dictadura de 21 años.", coordinates: [-14.23, -51.92] },
+          { id: "rd-1965", country: "Rep. Dominicana", years: [1965], type: 'operation', description: "Operación Power Pack.", expandedDescription: "Invasión de 42,000 marines para evitar un gobierno de corte socialista.", coordinates: [18.73, -70.16] },
+          { id: "uy-1973", country: "Uruguay", years: [1973], type: 'coup', description: "Plan Cóndor.", expandedDescription: "Asesoramiento en técnicas de represión y tortura durante la dictadura.", coordinates: [-32.52, -55.76] },
+          { id: "cl-1973", country: "Chile", years: [1973], type: 'coup', description: "Golpe contra Allende.", expandedDescription: "Bombardeo de La Moneda y apoyo a la dictadura de Pinochet.", coordinates: [-35.67, -71.54] },
+          { id: "ar-76", country: "Argentina", years: [1976, 2024], type: 'coup', description: "Junta Militar y presiones de soberanía.", expandedDescription: "Apoyo al golpe de 1976 y presiones contemporáneas por el litio y recursos.", coordinates: [-38.41, -63.61] },
+          { id: "ni-81", country: "Nicaragua", years: [1981, 1986], type: 'operation', description: "Guerra de los Contras.", expandedDescription: "Financiamiento paramilitar ilegal y minado de puertos condenado por la CIJ.", coordinates: [12.86, -85.20] },
+          { id: "gr-83", country: "Granada", years: [1983], type: 'operation', description: "Operación Furia Urgente.", expandedDescription: "Invasión total para deponer al gobierno revolucionario.", coordinates: [12.11, -61.67] },
+          { id: "pa-89", country: "Panamá", years: [1989], type: 'operation', description: "Causa Justa.", expandedDescription: "Bombardeo de El Chorrillo e invasión masiva para capturar a Noriega.", coordinates: [8.53, -80.78] },
+          { id: "ve-02", country: "Venezuela", years: [2002, 2019, 2025], type: 'coup', description: "Guerra económica y sabotajes.", expandedDescription: "Intentos de golpe, ciberataques a la red eléctrica y bloqueos financieros.", coordinates: [6.42, -66.58] },
+          { id: "jp-1945", country: "Japón", years: [1945], type: 'operation', description: "Bombas Atómicas.", expandedDescription: "Único uso de armas nucleares contra civiles en Hiroshima y Nagasaki.", coordinates: [36.20, 138.25] },
+          { id: "vn-63", country: "Vietnam", years: [1964, 1972], type: 'operation', description: "Guerra de Vietnam.", expandedDescription: "Bombardeos masivos con Napalm y Agente Naranja.", coordinates: [14.05, 108.27] },
+          { id: "la-64", country: "Laos", years: [1964, 1973], type: 'operation', description: "Guerra Secreta.", expandedDescription: "El país más bombardeado per cápita de la historia del mundo.", coordinates: [19.85, 102.49] },
+          { id: "iq-03", country: "Irak", years: [1991, 2003, 2025], type: 'operation', description: "Invasión y bombardeos.", expandedDescription: "Guerra basada en premisas falsas que destruyó el estado iraquí.", coordinates: [33.22, 43.67] },
+          { id: "ly-11", country: "Libia", years: [1986, 2011], type: 'operation', description: "Bombardeos de la OTAN.", expandedDescription: "Destrucción de la infraestructura libia y ejecución de Gadafi.", coordinates: [31.22, 16.51] },
+          { id: "ps-23", country: "Palestina", years: [2023, 2024, 2025], type: 'operation', description: "Sustento militar crítico.", expandedDescription: "Apoyo masivo con bombas de alta potencia para la ofensiva en Gaza.", coordinates: [31.35, 34.30] },
+          { id: "ns-22", country: "Nord Stream", years: [2022], type: 'operation', description: "Sabotaje Energético.", expandedDescription: "Explosión de los gasoductos Nord Stream en el Mar Báltico.", coordinates: [55.35, 15.55] },
+          { id: "yu-99", country: "Yugoslavia", years: [1999], type: 'operation', description: "Bombardeos OTAN.", expandedDescription: "Campaña de 78 días sin mandato de la ONU que fragmentó el país.", coordinates: [44.01, 21.00] }
+          // ... (se pueden añadir el resto de países siguiendo este formato)
+        ];
+
+        // --- COMPONENTS ---
+        const App = () => {
+          const [selectedYear, setSelectedYear] = useState(null);
+          const [selectedIntervention, setSelectedIntervention] = useState(null);
+          const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+          const mapRef = useRef(null);
+
+          const availableYears = useMemo(() => {
+            const years = new Set();
+            interventions.forEach(i => i.years.forEach(y => years.add(y)));
+            return Array.from(years).sort((a, b) => a - b);
+          }, []);
+
+          const filteredInterventions = useMemo(() => {
+            if (selectedYear === null) return interventions;
+            return interventions.filter(i => i.years.includes(selectedYear));
+          }, [selectedYear]);
+
+          const stats = useMemo(() => {
+            let ops = 0, coups = 0;
+            filteredInterventions.forEach(i => {
+              const weight = selectedYear ? 1 : i.years.length;
+              if (i.type === 'operation') ops += weight;
+              else coups += weight;
+            });
+            return { ops, coups };
+          }, [filteredInterventions, selectedYear]);
+
+          useEffect(() => {
+            const container = L.DomUtil.get('map');
+            if (container != null) { container._leaflet_id = null; }
+
+            const map = L.map('map', { 
+                zoomControl: false, 
+                attributionControl: false,
+                minZoom: 2,
+                maxBounds: [[-90, -180], [90, 180]]
+            }).setView([20, 0], 2.5);
+            
+            mapRef.current = map;
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            return () => map.remove();
+          }, []);
+
+          useEffect(() => {
+            if (!mapRef.current) return;
+            const map = mapRef.current;
+
+            // Limpiar marcadores anteriores
+            map.eachLayer(layer => {
+              if (layer instanceof L.CircleMarker || layer instanceof L.Marker) map.removeLayer(layer);
+            });
+
+            filteredInterventions.forEach(i => {
+              const radius = (selectedYear ? 10 : 8 + Math.min(i.years.length, 10)) * (map.getZoom() / 3);
+              
+              // Badge de conteo
+              if (!selectedYear && i.years.length > 1) {
+                const icon = L.divIcon({
+                  html: `<div class="marker-count-badge">${i.years.length}</div>`,
+                  className: '', iconSize: [0, 0], iconAnchor: [0, 16]
+                });
+                L.marker(i.coordinates, { icon }).addTo(map);
+              }
+
+              const circle = L.circleMarker(i.coordinates, {
+                radius: radius,
+                fillColor: i.type === 'operation' ? '#ef4444' : '#f59e0b',
+                fillOpacity: 0.8,
+                color: '#fff',
+                weight: 1
+              }).addTo(map);
+
+              circle.on('click', () => {
+                setSelectedIntervention(i);
+                setIsSidebarOpen(true);
+                map.flyTo(i.coordinates, 5);
+              });
+
+              circle.bindPopup(`
+                <div style="font-family:Inter">
+                    <b style="font-size:14px">${i.country}</b><br/>
+                    <span style="font-size:11px; opacity:0.8">${i.description}</span>
+                </div>
+              `, { className: 'custom-popup', closeButton: false });
+            });
+          }, [filteredInterventions, selectedYear]);
+
+          return (
+            <div className="relative h-screen w-screen bg-slate-950 overflow-hidden select-none">
+              
+              {/* Header */}
+              <header className="absolute top-0 left-0 right-0 z-[1000] p-3 md:p-6 bg-gradient-to-b from-slate-950 to-transparent pointer-events-none">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center pointer-events-auto">
+                  <div>
+                    <h1 className="text-3xl md:text-7xl font-black italic uppercase leading-none">
+                      <span className="text-white">CHRON</span><span className="text-red-600">OS</span>
+                    </h1>
+                    <p className="text-slate-500 text-[8px] md:text-xs font-bold uppercase tracking-[0.3em]">
+                      Intervenciones militares <span className="text-red-600">USA</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <div className="bg-slate-900/80 px-3 py-1 rounded-lg border-l-4 border-red-600 backdrop-blur-md">
+                      <span className="text-[7px] uppercase font-bold text-red-500 block">Ataques</span>
+                      <span className="text-sm md:text-2xl font-black">{stats.ops}</span>
+                    </div>
+                    <div className="bg-slate-900/80 px-3 py-1 rounded-lg border-l-4 border-amber-500 backdrop-blur-md">
+                      <span className="text-[7px] uppercase font-bold text-amber-500 block">Golpes</span>
+                      <span className="text-sm md:text-2xl font-black">{stats.coups}</span>
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              {/* Map Container */}
+              <div id="map" className="h-full w-full z-0"></div>
+
+              {/* Timeline Container */}
+              <div className="fixed bottom-0 left-0 right-0 z-[1000] p-3 md:p-10 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none">
+                <div className="max-w-3xl mx-auto bg-slate-900/90 backdrop-blur-xl p-3 md:p-6 rounded-2xl border border-slate-800 pointer-events-auto shadow-2xl">
+                  <div className="flex justify-between items-center mb-2 md:mb-4">
+                    <h4 className="text-sm md:text-3xl font-black italic">{selectedYear || 'VISTA GLOBAL'}</h4>
+                    <button 
+                        onClick={() => {setSelectedYear(null); setSelectedIntervention(null);}}
+                        className={`px-4 py-1.5 md:px-8 md:py-2 rounded-full text-[9px] md:text-xs font-black uppercase tracking-widest ${selectedYear === null ? 'bg-red-600' : 'bg-slate-800 text-slate-400'}`}
+                    >
+                      TODOS
+                    </button>
+                  </div>
+                  <input 
+                    type="range" min="0" max={availableYears.length - 1} step="1"
+                    value={selectedYear ? availableYears.indexOf(selectedYear) : 0}
+                    onChange={(e) => setSelectedYear(availableYears[e.target.value])}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <aside className={`fixed inset-y-0 right-0 z-[2000] w-full md:w-[450px] bg-slate-900/95 backdrop-blur-2xl transition-transform duration-500 border-l border-slate-800 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
+                <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                   <h2 className="text-xl font-black italic uppercase text-red-600">{selectedIntervention?.country}</h2>
+                   <button onClick={() => setIsSidebarOpen(false)} className="p-2 bg-slate-800 rounded-full">
+                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                   </button>
+                </div>
+                <div className="p-6 md:p-10 overflow-y-auto no-scrollbar">
+                  {selectedIntervention && (
+                    <div className="animate-slideUp space-y-6">
+                      <div className="flex gap-2 flex-wrap">
+                        {selectedIntervention.years.map(y => <span key={y} className="bg-red-600 px-2 py-0.5 rounded text-[10px] font-bold">{y}</span>)}
+                      </div>
+                      <h3 className="text-2xl md:text-3xl font-black leading-tight">{selectedIntervention.description}</h3>
+                      <div className="h-1 w-16 bg-red-600"></div>
+                      <p className="text-slate-300 text-lg md:text-xl leading-relaxed">{selectedIntervention.expandedDescription}</p>
+                    </div>
+                  )}
+                </div>
+              </aside>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
