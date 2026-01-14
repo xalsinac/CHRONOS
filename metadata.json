@@ -1,0 +1,7 @@
+{
+  "name": "Cronología de Intervenciones",
+  "description": "Una herramienta educativa interactiva para visualizar la historia de las intervenciones y bombardeos de EE.UU. a nivel global.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
